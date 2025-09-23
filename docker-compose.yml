@@ -1,0 +1,75 @@
+services:
+  # Database Tier - PostgreSQL
+  database:
+    image: postgres:15-alpine
+    container_name: taskapp_db
+    environment:
+      POSTGRES_DB: taskmanager
+      POSTGRES_USER: taskuser
+      POSTGRES_PASSWORD: taskpass123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - taskapp_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskuser -d taskmanager"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Application Tier - Node.js API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: taskapp_api
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: taskmanager
+      DB_USER: taskuser
+      DB_PASSWORD: taskpass123
+    ports:
+      - "3001:3001"
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/server.js:/app/server.js
+      - ./backend/healthcheck.js:/app/healthcheck.js
+    networks:
+      - taskapp_network
+    restart: unless-stopped
+
+  # Presentation Tier - React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: taskapp_web
+    environment:
+      REACT_APP_API_URL: http://localhost:3001
+      CHOKIDAR_USEPOLLING: true
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    networks:
+      - taskapp_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  taskapp_network:
+    driver: bridge
