@@ -55,14 +55,15 @@ else
 fi
 
 # Check if Docker Compose is available
-if command -v docker-compose &> /dev/null; then
-    print_status 0 "Docker Compose is installed"
-    docker-compose --version
-elif docker compose version &> /dev/null; then
-    print_status 0 "Docker Compose (plugin) is installed"
+if command -v docker > /dev/null 2>&1 && docker compose version &> /dev/null; then
+    print_status 0 "Docker Compose (plugin) is available"
     docker compose version
+elif command -v docker-compose &> /dev/null; then
+    print_status 0 "Docker Compose (standalone) is available"
+    docker-compose --version
+    print_info "Consider upgrading to Docker with integrated Compose plugin"
 else
-    print_status 1 "Docker Compose is not installed" "Install Docker Compose: https://docs.docker.com/compose/install/"
+    print_status 1 "Docker Compose is not available" "Install Docker with Compose plugin or standalone docker-compose"
     exit 1
 fi
 
@@ -159,7 +160,7 @@ if [[ -n "$DETECTED_HOST_IP" && "$DETECTED_HOST_IP" != "127.0.0.1" ]]; then
     
     if [[ "$CURRENT_HOST_IP" == "localhost" || "$CURRENT_HOST_IP" == "127.0.0.1" ]]; then
         print_warning "Current configuration uses localhost, but detected IP is $DETECTED_HOST_IP"
-        print_info "For remote access, export HOST_IP=$DETECTED_HOST_IP before running docker-compose"
+        print_info "For remote access, export HOST_IP=$DETECTED_HOST_IP before running docker compose"
     fi
 else
     print_warning "Could not detect non-localhost IP address"
@@ -169,9 +170,20 @@ fi
 # Check if HOST_IP environment variable is set
 if [[ -n "$HOST_IP" ]]; then
     print_status 0 "HOST_IP environment variable is set: $HOST_IP"
+    
+    # Check if it's a hostname or IP
+    if [[ $HOST_IP =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        print_info "HOST_IP is an IP address"
+    elif [[ $HOST_IP =~ ^[a-zA-Z0-9][a-zA-Z0-9\.-]*[a-zA-Z0-9]$ ]] || [[ $HOST_IP == "localhost" ]]; then
+        print_info "HOST_IP is a hostname: $HOST_IP"
+        print_warning "Development mode with hostnames may show 'Invalid Host header'"
+        print_info "For remote access with hostnames, use: PRODUCTION=true ./start.sh"
+    else
+        print_warning "HOST_IP format is unusual: $HOST_IP"
+    fi
 else
     print_warning "HOST_IP environment variable not set - will default to localhost"
-    print_info "For remote access: export HOST_IP=your-server-ip"
+    print_info "For remote access: export HOST_IP=your-server-ip-or-hostname"
 fi
 
 # Check docker-compose configuration
@@ -277,12 +289,12 @@ echo ""
 echo "11. 📋 Container Status Check"
 echo "-----------------------------"
 
-if docker-compose ps &> /dev/null 2>&1; then
+if docker compose ps &> /dev/null 2>&1; then
     echo "Current container status:"
-    docker-compose ps
+    docker compose ps
     
     # Check if containers are running
-    if docker-compose ps | grep -q "Up"; then
+    if docker compose ps | grep -q "running"; then
         print_info "Some containers are running"
         
         # Test connectivity to running services
@@ -295,49 +307,61 @@ if docker-compose ps &> /dev/null 2>&1; then
         if curl -f -s http://${TEST_HOST_IP}:3001/health &> /dev/null; then
             print_status 0 "Backend API is responding on ${TEST_HOST_IP}:3001"
         else
-            print_status 1 "Backend API is not responding on ${TEST_HOST_IP}:3001" "Check backend logs: docker-compose logs backend"
+            print_status 1 "Backend API is not responding on ${TEST_HOST_IP}:3001" "Check backend logs: docker compose logs backend"
         fi
         
         if curl -f -s http://${TEST_HOST_IP}:3000 &> /dev/null; then
             print_status 0 "Frontend is responding on ${TEST_HOST_IP}:3000"
         else
-            print_status 1 "Frontend is not responding on ${TEST_HOST_IP}:3000" "Check frontend logs: docker-compose logs frontend"
+            # Check for Invalid Host header error
+            curl_output=$(curl -s http://${TEST_HOST_IP}:3000 2>&1)
+            if echo "$curl_output" | grep -q "Invalid Host header"; then
+                print_status 1 "Frontend showing 'Invalid Host header' error" "Use production mode: PRODUCTION=true ./start.sh, or use IP address instead of hostname"
+            else
+                print_status 1 "Frontend is not responding on ${TEST_HOST_IP}:3000" "Check frontend logs: docker compose logs frontend"
+            fi
         fi
     else
         print_info "No containers are currently running"
     fi
 else
-    print_info "No docker-compose services found in current directory"
+    print_info "No docker compose services found in current directory"
 fi
 
 echo ""
 echo "🎯 Quick Fixes for Common Issues:"
 echo "================================="
 echo ""
-echo "1. 🌐 Host IP Configuration (for remote access):"
+echo "1. 🌐 Host IP/Hostname Configuration:"
 echo "   Detect IP: ip route get 1.1.1.1 | grep -oP 'src \\K\\S+'"
-echo "   Set manually: export HOST_IP=your-server-ip"
-echo "   Example: export HOST_IP=192.168.1.100"
+echo "   Set IP manually: export HOST_IP=192.168.1.100"
+echo "   Set hostname: export HOST_IP=myserver.local"
+echo "   Use domain: export HOST_IP=server.example.com"
 echo ""
-echo "2. 🔥 Firewall blocking connections:"
+echo "2. 🚫 Invalid Host Header (when using hostnames):"
+echo "   RECOMMENDED: Use production mode: PRODUCTION=true ./start.sh"
+echo "   ALTERNATIVE: Use IP address instead of hostname"
+echo "   DEVELOPMENT: Accept warning and use localhost for access"
+echo ""
+echo "3. 🔥 Firewall blocking connections:"
 echo "   Ubuntu/Debian: sudo ufw allow 3000:3001/tcp"
 echo "   RHEL/CentOS:   sudo firewall-cmd --permanent --add-port=3000-3001/tcp && sudo firewall-cmd --reload"
 echo ""
-echo "3. 📦 Docker permission issues:"
+echo "4. 📦 Docker permission issues:"
 echo "   sudo usermod -aG docker \\$USER && newgrp docker"
 echo ""
-echo "4. 🌐 Port conflicts:"
+echo "5. 🌐 Port conflicts:"
 echo "   Check what's using ports: sudo lsof -i :3000 -i :3001 -i :5432"
 echo "   Kill conflicting processes: sudo kill -9 <PID>"
 echo ""
-echo "5. 🔧 SELinux issues (RHEL/CentOS):"
+echo "6. 🔧 SELinux issues (RHEL/CentOS):"
 echo "   sudo setsebool -P container_manage_cgroup on"
 echo ""
-echo "6. 🐋 Reset Docker environment:"
-echo "   docker-compose down -v && docker system prune -f"
+echo "7. 🐋 Reset Docker environment:"
+echo "   docker compose down -v && docker system prune -f"
 echo ""
-echo "7. 📝 View detailed logs:"
-echo "   docker-compose logs -f"
+echo "8. 📝 View detailed logs:"
+echo "   docker compose logs -f"
 echo ""
 
 echo "✅ Diagnostic complete! Check the issues marked with ❌ above."

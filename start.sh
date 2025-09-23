@@ -22,15 +22,53 @@ detect_host_ip() {
     echo "🌐 Detected host IP: $HOST_IP"
 }
 
+# Function to validate hostname/IP
+validate_host() {
+    local host="$1"
+    
+    # Check if it's an IP address
+    if [[ $host =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        echo "📍 Using IP address: $host"
+        return 0
+    # Check if it's a hostname
+    elif [[ $host =~ ^[a-zA-Z0-9][a-zA-Z0-9\.-]*[a-zA-Z0-9]$ ]] || [[ $host == "localhost" ]]; then
+        echo "🏷️  Using hostname: $host"
+        echo "ℹ️  Note: React dev server host check is disabled for hostname support"
+        return 0
+    else
+        echo "⚠️  Warning: '$host' may not be a valid hostname or IP"
+        return 1
+    fi
+}
+
 # Detect host IP if not already set
 if [[ -z "$HOST_IP" ]]; then
     detect_host_ip
 fi
 
-# Export HOST_IP for docker-compose
+# Validate the HOST_IP
+validate_host "$HOST_IP"
+
+# Export HOST_IP for Docker Compose
 export HOST_IP
 
 echo "🔧 Using HOST_IP: $HOST_IP"
+
+# Check if production mode is requested
+PRODUCTION_MODE=${PRODUCTION:-false}
+
+if [[ "$PRODUCTION_MODE" == "true" ]]; then
+    echo "🏭 Starting in PRODUCTION mode (static files, no host check issues)"
+    COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml"
+else
+    echo "🛠️  Starting in DEVELOPMENT mode"
+    if [[ "$HOST_IP" != "localhost" && "$HOST_IP" != "127.0.0.1" ]]; then
+        echo "⚠️  WARNING: Development mode with external hostname may show 'Invalid Host header'"
+        echo "   For production deployment, use: PRODUCTION=true ./start.sh"
+        echo "   Or access via: http://localhost:3000 (port forwarding)"
+    fi
+    COMPOSE_FILES="-f docker-compose.yml"
+fi
 
 # Check if Docker is running
 if ! docker info > /dev/null 2>&1; then
@@ -39,12 +77,18 @@ if ! docker info > /dev/null 2>&1; then
 fi
 
 # Check if Docker Compose is available
-if ! command -v docker-compose > /dev/null 2>&1; then
-    echo "❌ Docker Compose is not installed. Please install it and try again."
+if ! command -v docker > /dev/null 2>&1; then
+    echo "❌ Docker is not installed. Please install Docker and try again."
     exit 1
 fi
 
-echo "✅ Docker and Docker Compose are available"
+# Check if Docker Compose plugin is available
+if ! docker compose version > /dev/null 2>&1; then
+    echo "❌ Docker Compose plugin is not available. Please install Docker Compose or update Docker."
+    exit 1
+fi
+
+echo "✅ Docker and Docker Compose plugin are available"
 
 # Create environment files if they don't exist
 if [ ! -f backend/.env ]; then
@@ -60,13 +104,13 @@ fi
 echo "🏗️  Building and starting services..."
 
 # Build and start all services
-docker-compose up --build -d
+docker compose $COMPOSE_FILES up --build -d
 
 echo "⏳ Waiting for services to be ready..."
 
 # Wait for database to be healthy
 echo "🗄️  Waiting for database..."
-while ! docker-compose exec -T database pg_isready -U taskuser -d taskmanager > /dev/null 2>&1; do
+while ! docker compose exec -T database pg_isready -U taskuser -d taskmanager > /dev/null 2>&1; do
     echo "   Database not ready yet, waiting..."
     sleep 2
 done
@@ -95,8 +139,8 @@ echo ""
 echo "🔍 Health Check: curl http://${HOST_IP}:3001/health"
 echo "📊 API Stats:    curl http://${HOST_IP}:3001/api/stats"
 echo ""
-echo "📋 To view logs: docker-compose logs -f"
-echo "⏹️  To stop:     docker-compose down"
+echo "📋 To view logs: docker compose logs -f"
+echo "⏹️  To stop:     docker compose down"
 echo ""
 
 # Open browser (optional)

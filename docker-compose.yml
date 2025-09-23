@@ -59,6 +59,8 @@ services:
       REACT_APP_API_URL: http://${HOST_IP:-localhost}:3001
       CHOKIDAR_USEPOLLING: true
       HOST: 0.0.0.0
+      # Secure host configuration - only allow specific hosts
+      ALLOWED_HOSTS: ${HOST_IP:-localhost},localhost,127.0.0.1,0.0.0.0
     ports:
       - "3000:3000"
     depends_on:

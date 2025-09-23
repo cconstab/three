@@ -1,0 +1,10 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    environment:
+      # Production build doesn't need host checking - it's static files served by nginx
+      # Remove development-specific environment variables
+      REACT_APP_API_URL: http://${HOST_IP:-localhost}:3001
+    # Remove CHOKIDAR_USEPOLLING and other dev-only vars

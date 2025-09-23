@@ -12,6 +12,53 @@ Error: connect ECONNREFUSED 127.0.0.1:3001
 Failed to fetch from http://localhost:3001/api/tasks
 ```
 
+### 2. **Invalid Host Header Error**
+
+**Symptoms:**
+```
+Invalid Host header
+```
+
+**Cause:** React development server rejects requests when using a hostname instead of an IP address for security reasons.
+
+**Solutions:**
+
+**Option 1: Use Production Mode (Recommended)**
+```bash
+# Production mode uses nginx and static files, avoiding host header issues
+export HOST_IP=your-hostname-or-ip
+PRODUCTION=true ./start.sh
+```
+
+**Option 2: Use IP Address Instead of Hostname**
+```bash
+# Find your IP address
+ip route get 1.1.1.1 | grep -oP 'src \K\S+'
+
+# Use IP instead of hostname
+export HOST_IP=192.168.1.100  # Your actual IP
+./start.sh
+```
+
+**Option 3: Access via Port Forwarding (Development)**
+```bash
+# Start normally and access via localhost
+./start.sh
+# Then access via: http://localhost:3000 (using SSH port forwarding or similar)
+```
+
+**Option 4: Development Mode with Warning (Not Recommended for Production)**
+```bash
+# Development mode may show warnings but should still work
+export HOST_IP=your-hostname
+./start.sh
+# Access might work despite the warning message
+```
+
+### 3. **CORS and Network Configuration Errors**
+
+### 3. **CORS and Network Configuration Errors**
+
 **Causes & Solutions:**
 
 #### A. Firewall Blocking Ports
@@ -67,7 +114,7 @@ newgrp docker
 docker ps
 ```
 
-### 2. **Port Already in Use Errors**
+### 4. **Port Already in Use Errors**
 
 **Symptoms:**
 ```
@@ -89,7 +136,7 @@ sudo fuser -k 3000/tcp
 sudo fuser -k 3001/tcp
 ```
 
-### 3. **DNS Resolution Issues**
+### 5. **DNS Resolution Issues**
 
 **Symptoms:**
 ```
@@ -110,7 +157,7 @@ ping localhost
 nslookup localhost
 ```
 
-### 4. **Container Network Issues**
+### 6. **Container Network Issues**
 
 **Symptoms:**
 ```
@@ -129,8 +176,8 @@ docker network rm taskapp_network
 sudo systemctl restart docker
 
 # Recreate containers
-docker-compose down -v
-docker-compose up --build
+docker compose down -v
+docker compose up --build
 ```
 
 ## 🔧 Environment-Specific Configurations
@@ -194,7 +241,7 @@ sudo systemctl start docker
 sudo systemctl enable docker
 
 # Clean previous containers
-docker-compose down -v
+docker compose down -v
 docker system prune -f
 
 # Check ports are free
@@ -207,7 +254,7 @@ sudo lsof -i :3000 -i :3001 -i :5432
 ### 3. Verify Services
 ```bash
 # Check container status
-docker-compose ps
+docker compose ps
 
 # Test backend health
 curl http://localhost:3001/health
@@ -216,7 +263,7 @@ curl http://localhost:3001/health
 curl http://localhost:3000
 
 # View logs if issues persist
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ## 🔍 Advanced Debugging
@@ -228,20 +275,20 @@ docker network ls
 docker network inspect taskapp_network
 
 # Check container networking
-docker-compose exec backend ip addr
-docker-compose exec frontend ip addr
+docker compose exec backend ip addr
+docker compose exec frontend ip addr
 
 # Test internal connectivity
-docker-compose exec frontend curl http://backend:3001/health
+docker compose exec frontend curl http://backend:3001/health
 ```
 
 ### Service Debugging
 ```bash
 # Backend debugging
-docker-compose exec backend npm run debug
+docker compose exec backend npm run debug
 
 # Database connectivity test
-docker-compose exec backend node -e "
+docker compose exec backend node -e "
 const { Pool } = require('pg');
 const pool = new Pool({
   host: 'database',
@@ -257,12 +304,12 @@ pool.query('SELECT NOW()').then(res => console.log('DB OK:', res.rows[0])).catch
 ### Log Analysis
 ```bash
 # Comprehensive logs
-docker-compose logs --tail=100 -f
+docker compose logs --tail=100 -f
 
 # Service-specific logs
-docker-compose logs backend
-docker-compose logs frontend
-docker-compose logs database
+docker compose logs backend
+docker compose logs frontend
+docker compose logs database
 
 # System logs
 journalctl -u docker.service --tail=50
@@ -296,8 +343,8 @@ sudo systemctl start docker
 
 ### Arch Linux Specific
 ```bash
-# Install Docker
-sudo pacman -S docker docker-compose
+# Install Docker (includes compose plugin)
+sudo pacman -S docker
 
 # Enable Docker service
 sudo systemctl enable docker.service
@@ -310,7 +357,7 @@ If nothing works, try this complete reset:
 
 ```bash
 # Stop all containers
-docker-compose down -v
+docker compose down -v
 
 # Remove all Docker data
 docker system prune -a -f
@@ -333,7 +380,7 @@ sudo systemctl stop firewalld  # RHEL
 If you're still experiencing issues:
 
 1. Run the diagnostic script: `./diagnose-network.sh`
-2. Check logs: `docker-compose logs -f`
+2. Check logs: `docker compose logs -f`
 3. Verify system requirements
 4. Create an issue with the diagnostic output
 

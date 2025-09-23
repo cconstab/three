@@ -40,14 +40,17 @@ nano .env
 ## 🔍 Find Your IP Address
 
 ```bash
-# Method 1: Using ip command (most Linux)
+# Method 1: Using ip command (Linux)
 ip route get 1.1.1.1 | grep -oP 'src \K\S+'
 
-# Method 2: Using ifconfig
-ifconfig | grep -E 'inet.*broadcast' | grep -v 127.0.0.1 | awk '{print $2}'
+# Method 2: Using ifconfig (Linux/macOS)
+ifconfig | grep -E 'inet.*broadcast' | grep -v 127.0.0.1 | awk '{print $2}' | head -1
 
-# Method 3: Using hostname
+# Method 3: Using hostname (Linux only)
 hostname -I | awk '{print $1}'
+
+# Method 4: Automatic detection (recommended)
+# The start.sh script will auto-detect your IP using the best available method
 ```
 
 ## 🌐 Access Your Application
@@ -73,7 +76,7 @@ If you get connection errors:
 
 3. **Verify the services are using the correct IP**:
    ```bash
-   docker-compose logs | grep "HOST_IP\|REACT_APP_API_URL"
+   docker compose logs | grep "HOST_IP\|REACT_APP_API_URL"
    ```
 
 4. **Test connectivity**:
@@ -101,19 +104,19 @@ sudo firewall-cmd --list-ports
 
 ```bash
 # Check container status
-docker-compose ps
+docker compose ps
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Restart with new IP
 export HOST_IP=new-ip-address
-docker-compose down
-docker-compose up -d
+docker compose down
+docker compose up -d
 
 # Clean restart
-docker-compose down -v
-docker-compose up --build -d
+docker compose down -v
+docker compose up --build -d
 ```
 
 ## ⚠️ Common Issues
@@ -122,21 +125,21 @@ docker-compose up --build -d
 The backend automatically allows your HOST_IP. If you still get CORS errors:
 ```bash
 # Check backend logs for CORS configuration
-docker-compose logs backend | grep "CORS enabled"
+docker compose logs backend | grep "CORS enabled"
 ```
 
 ### 2. Connection Refused
 ```bash
 # Check if services are listening on the right interface
-docker-compose exec backend netstat -tlnp
-docker-compose exec frontend netstat -tlnp
+docker compose exec backend netstat -tlnp
+docker compose exec frontend netstat -tlnp
 ```
 
 ### 3. IP Detection Failed
 ```bash
 # Manually set the IP
 export HOST_IP=192.168.1.100
-docker-compose down && docker-compose up -d
+docker compose down && docker compose up -d
 ```
 
 ## 🎯 One-Line Commands
@@ -149,7 +152,7 @@ curl -sSL your-repo-url/start.sh | bash
 HOST_IP=192.168.1.100 ./start.sh
 
 # Reset and redeploy
-docker-compose down -v && ./start.sh
+docker compose down -v && ./start.sh
 ```
 
 ## 📱 Mobile/Remote Access

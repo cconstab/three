@@ -26,45 +26,45 @@ show_help() {
 case "$1" in
     "start")
         echo "🚀 Starting services..."
-        docker-compose up -d
+        docker compose up -d
         ;;
     "stop")
         echo "⏹️  Stopping services..."
-        docker-compose down
+        docker compose down
         ;;
     "restart")
         echo "🔄 Restarting services..."
-        docker-compose down
-        docker-compose up -d
+        docker compose down
+        docker compose up -d
         ;;
     "logs")
         echo "📋 Showing all logs..."
-        docker-compose logs -f
+        docker compose logs -f
         ;;
     "backend")
         echo "📋 Showing backend logs..."
-        docker-compose logs -f backend
+        docker compose logs -f backend
         ;;
     "frontend")
         echo "📋 Showing frontend logs..."
-        docker-compose logs -f frontend
+        docker compose logs -f frontend
         ;;
     "database")
         echo "📋 Showing database logs..."
-        docker-compose logs -f database
+        docker compose logs -f database
         ;;
     "clean")
         echo "🧹 Cleaning up..."
-        docker-compose down -v --remove-orphans
+        docker compose down -v --remove-orphans
         docker system prune -f
         ;;
     "shell")
         echo "🐚 Opening backend shell..."
-        docker-compose exec backend /bin/sh
+        docker compose exec backend /bin/sh
         ;;
     "db")
         echo "🗄️  Connecting to database..."
-        docker-compose exec database psql -U taskuser -d taskmanager
+        docker compose exec database psql -U taskuser -d taskmanager
         ;;
     "test")
         echo "🧪 Running API tests..."
@@ -79,7 +79,7 @@ case "$1" in
         ;;
     "status")
         echo "📊 Service Status:"
-        docker-compose ps
+        docker compose ps
         echo ""
         echo "🔍 Health Checks:"
         echo -n "Backend: "
@@ -95,7 +95,7 @@ case "$1" in
             echo "❌ Unhealthy"
         fi
         echo -n "Database: "
-        if docker-compose exec -T database pg_isready -U taskuser -d taskmanager > /dev/null 2>&1; then
+        if docker compose exec -T database pg_isready -U taskuser -d taskmanager > /dev/null 2>&1; then
             echo "✅ Healthy"
         else
             echo "❌ Unhealthy"
