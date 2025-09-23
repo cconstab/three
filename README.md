@@ -293,7 +293,26 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build
 - **User Experience**: Beautiful, responsive UI with animations
 - **DevOps**: Health checks, logging, graceful shutdowns
 
-## 🤝 Contributing
+## � Troubleshooting
+
+### Network Issues on Linux
+If you're experiencing network errors on a clean Linux machine, see our comprehensive troubleshooting guide:
+
+📖 **[Linux Troubleshooting Guide](LINUX_TROUBLESHOOTING.md)**
+
+### Quick Diagnostic
+Run our network diagnostic script to identify common issues:
+```bash
+./diagnose-network.sh
+```
+
+### Common Solutions
+- **Firewall blocking ports**: `sudo ufw allow 3000:3001/tcp` (Ubuntu) or `sudo firewall-cmd --permanent --add-port=3000-3001/tcp` (RHEL)
+- **Docker permission issues**: `sudo usermod -aG docker $USER && newgrp docker`
+- **Port conflicts**: `sudo lsof -i :3000 -i :3001 -i :5432`
+- **SELinux blocking (RHEL)**: `sudo setsebool -P container_manage_cgroup on`
+
+## �🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -308,10 +327,11 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🙋‍♂️ Support
 
 If you encounter any issues or have questions:
-1. Check the troubleshooting section
-2. Review Docker and application logs
-3. Ensure all prerequisites are installed
-4. Verify port availability
+1. **First**: Run `./diagnose-network.sh` to identify common issues
+2. **Check**: [Linux Troubleshooting Guide](LINUX_TROUBLESHOOTING.md) for detailed solutions
+3. Review Docker and application logs: `docker-compose logs -f`
+4. Ensure all prerequisites are installed
+5. Verify port availability: `sudo lsof -i :3000 -i :3001 -i :5432`
 
 ---
 
