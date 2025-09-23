@@ -30,17 +30,29 @@ pool.on('error', (err) => {
 // Middleware
 app.use(helmet());
 app.use(morgan('combined'));
+
+// Dynamic CORS configuration for flexible host IPs
+const allowedOrigins = [];
+const hostIP = process.env.HOST_IP || 'localhost';
+const frontendURL = process.env.FRONTEND_URL;
+
+// Add various host combinations
+if (frontendURL) {
+  allowedOrigins.push(frontendURL);
+}
+allowedOrigins.push(`http://localhost:3000`);
+allowedOrigins.push(`http://127.0.0.1:3000`);
+allowedOrigins.push(`http://0.0.0.0:3000`);
+allowedOrigins.push(`http://${hostIP}:3000`);
+
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-        'http://0.0.0.0:3000',
-        process.env.FRONTEND_URL || 'http://localhost:3000'
-      ] 
+    ? allowedOrigins
     : true,
   credentials: true
 }));
+
+console.log('🌐 CORS enabled for origins:', process.env.NODE_ENV === 'production' ? allowedOrigins : 'all origins (development)');
 
 // Rate limiting
 const limiter = rateLimit({

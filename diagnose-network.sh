@@ -131,7 +131,62 @@ elif command -v iptables &> /dev/null; then
 fi
 
 echo ""
-echo "5. 📡 Network Connectivity Check"
+echo "5. 🌐 Host IP Detection and Configuration"
+echo "----------------------------------------"
+
+# Function to detect host IP
+detect_host_ip() {
+    local detected_ip=""
+    
+    # Try to detect the primary network interface IP
+    if command -v ip &> /dev/null; then
+        # Linux with ip command
+        detected_ip=$(ip route get 1.1.1.1 | grep -oP 'src \K\S+' 2>/dev/null)
+    elif command -v ifconfig &> /dev/null; then
+        # Linux/macOS with ifconfig
+        detected_ip=$(ifconfig | grep -E 'inet.*broadcast' | grep -v 127.0.0.1 | awk '{print $2}' | head -1)
+    fi
+    
+    echo "$detected_ip"
+}
+
+# Detect current host IP
+DETECTED_HOST_IP=$(detect_host_ip)
+CURRENT_HOST_IP=${HOST_IP:-$DETECTED_HOST_IP}
+
+if [[ -n "$DETECTED_HOST_IP" && "$DETECTED_HOST_IP" != "127.0.0.1" ]]; then
+    print_status 0 "Host IP detected: $DETECTED_HOST_IP"
+    
+    if [[ "$CURRENT_HOST_IP" == "localhost" || "$CURRENT_HOST_IP" == "127.0.0.1" ]]; then
+        print_warning "Current configuration uses localhost, but detected IP is $DETECTED_HOST_IP"
+        print_info "For remote access, export HOST_IP=$DETECTED_HOST_IP before running docker-compose"
+    fi
+else
+    print_warning "Could not detect non-localhost IP address"
+    print_info "You may need to manually set HOST_IP environment variable"
+fi
+
+# Check if HOST_IP environment variable is set
+if [[ -n "$HOST_IP" ]]; then
+    print_status 0 "HOST_IP environment variable is set: $HOST_IP"
+else
+    print_warning "HOST_IP environment variable not set - will default to localhost"
+    print_info "For remote access: export HOST_IP=your-server-ip"
+fi
+
+# Check docker-compose configuration
+if [[ -f "docker-compose.yml" ]]; then
+    if grep -q '\${HOST_IP' docker-compose.yml; then
+        print_status 0 "docker-compose.yml is configured for dynamic HOST_IP"
+    else
+        print_status 1 "docker-compose.yml uses hardcoded localhost" "Update docker-compose.yml to use \${HOST_IP:-localhost}"
+    fi
+else
+    print_status 1 "docker-compose.yml not found" "Ensure you're in the correct directory"
+fi
+
+echo ""
+echo "6. 📡 Network Connectivity Check"
 echo "--------------------------------"
 
 # Check if localhost resolves
@@ -149,7 +204,7 @@ else
 fi
 
 echo ""
-echo "6. 🐧 SELinux Check (RHEL/CentOS/Fedora)"
+echo "7. 🐧 SELinux Check (RHEL/CentOS/Fedora)"
 echo "----------------------------------------"
 
 if command -v getenforce &> /dev/null; then
@@ -167,7 +222,7 @@ else
 fi
 
 echo ""
-echo "7. 📊 System Resources Check"
+echo "8. 📊 System Resources Check"
 echo "----------------------------"
 
 # Check available memory
@@ -189,7 +244,7 @@ else
 fi
 
 echo ""
-echo "8. 🔧 Docker Network Check"
+echo "9. 🔧 Docker Network Check"
 echo "--------------------------"
 
 # Check if docker networks can be created
@@ -208,8 +263,8 @@ else
 fi
 
 echo ""
-echo "9. 🌍 DNS Resolution Check"
-echo "--------------------------"
+echo "10. 🌍 DNS Resolution Check"
+echo "---------------------------"
 
 # Check if external DNS works (needed for pulling images)
 if nslookup docker.io &> /dev/null; then
@@ -219,8 +274,8 @@ else
 fi
 
 echo ""
-echo "10. 📋 Container Status Check"
-echo "----------------------------"
+echo "11. 📋 Container Status Check"
+echo "-----------------------------"
 
 if docker-compose ps &> /dev/null 2>&1; then
     echo "Current container status:"
@@ -234,16 +289,19 @@ if docker-compose ps &> /dev/null 2>&1; then
         echo ""
         echo "🔗 Testing service connectivity:"
         
-        if curl -f -s http://localhost:3001/health &> /dev/null; then
-            print_status 0 "Backend API is responding"
+        # Use detected or configured host IP for testing
+        TEST_HOST_IP=${HOST_IP:-${DETECTED_HOST_IP:-localhost}}
+        
+        if curl -f -s http://${TEST_HOST_IP}:3001/health &> /dev/null; then
+            print_status 0 "Backend API is responding on ${TEST_HOST_IP}:3001"
         else
-            print_status 1 "Backend API is not responding" "Check backend logs: docker-compose logs backend"
+            print_status 1 "Backend API is not responding on ${TEST_HOST_IP}:3001" "Check backend logs: docker-compose logs backend"
         fi
         
-        if curl -f -s http://localhost:3000 &> /dev/null; then
-            print_status 0 "Frontend is responding"
+        if curl -f -s http://${TEST_HOST_IP}:3000 &> /dev/null; then
+            print_status 0 "Frontend is responding on ${TEST_HOST_IP}:3000"
         else
-            print_status 1 "Frontend is not responding" "Check frontend logs: docker-compose logs frontend"
+            print_status 1 "Frontend is not responding on ${TEST_HOST_IP}:3000" "Check frontend logs: docker-compose logs frontend"
         fi
     else
         print_info "No containers are currently running"
@@ -256,24 +314,29 @@ echo ""
 echo "🎯 Quick Fixes for Common Issues:"
 echo "================================="
 echo ""
-echo "1. 🔥 Firewall blocking connections:"
+echo "1. 🌐 Host IP Configuration (for remote access):"
+echo "   Detect IP: ip route get 1.1.1.1 | grep -oP 'src \\K\\S+'"
+echo "   Set manually: export HOST_IP=your-server-ip"
+echo "   Example: export HOST_IP=192.168.1.100"
+echo ""
+echo "2. 🔥 Firewall blocking connections:"
 echo "   Ubuntu/Debian: sudo ufw allow 3000:3001/tcp"
 echo "   RHEL/CentOS:   sudo firewall-cmd --permanent --add-port=3000-3001/tcp && sudo firewall-cmd --reload"
 echo ""
-echo "2. 📦 Docker permission issues:"
-echo "   sudo usermod -aG docker \$USER && newgrp docker"
+echo "3. 📦 Docker permission issues:"
+echo "   sudo usermod -aG docker \\$USER && newgrp docker"
 echo ""
-echo "3. 🌐 Port conflicts:"
+echo "4. 🌐 Port conflicts:"
 echo "   Check what's using ports: sudo lsof -i :3000 -i :3001 -i :5432"
 echo "   Kill conflicting processes: sudo kill -9 <PID>"
 echo ""
-echo "4. 🔧 SELinux issues (RHEL/CentOS):"
+echo "5. 🔧 SELinux issues (RHEL/CentOS):"
 echo "   sudo setsebool -P container_manage_cgroup on"
 echo ""
-echo "5. 🐋 Reset Docker environment:"
+echo "6. 🐋 Reset Docker environment:"
 echo "   docker-compose down -v && docker system prune -f"
 echo ""
-echo "6. 📝 View detailed logs:"
+echo "7. 📝 View detailed logs:"
 echo "   docker-compose logs -f"
 echo ""
 

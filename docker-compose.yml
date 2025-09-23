@@ -34,6 +34,8 @@ services:
       DB_NAME: taskmanager
       DB_USER: taskuser
       DB_PASSWORD: taskpass123
+      HOST_IP: ${HOST_IP:-localhost}
+      FRONTEND_URL: http://${HOST_IP:-localhost}:3000
     ports:
       - "3001:3001"
     depends_on:
@@ -54,7 +56,7 @@ services:
       dockerfile: Dockerfile
     container_name: taskapp_web
     environment:
-      REACT_APP_API_URL: http://localhost:3001
+      REACT_APP_API_URL: http://${HOST_IP:-localhost}:3001
       CHOKIDAR_USEPOLLING: true
       HOST: 0.0.0.0
     ports:
