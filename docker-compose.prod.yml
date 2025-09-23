@@ -3,6 +3,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.prod
+      args:
+        REACT_APP_API_URL: http://${HOST_IP:-localhost}:3001
     environment:
       # Production build doesn't need host checking - it's static files served by nginx
       # Remove development-specific environment variables
