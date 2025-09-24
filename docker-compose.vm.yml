@@ -1,0 +1,55 @@
+services:
+  # Ubuntu "VM" container with SSH and the full application stack
+  ubuntu-vm:
+    build:
+      context: .
+      dockerfile: Dockerfile.ubuntu-vm
+    container_name: three-tier-vm
+    hostname: ubuntu-vm
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - vm_data:/var/lib/postgresql/14/main
+      - vm_logs:/var/log
+      - vm_config:/etc/postgresql/14/main
+      - ./:/app/source:ro  # Mount source code as read-only
+    ports:
+      # SSH access
+      - "2222:22"
+      # Frontend HTTP
+      - "3000:3000"
+      # Backend API
+      - "3001:3001"
+      # PostgreSQL (optional external access)
+      - "5432:5432"
+    environment:
+      # Application configuration
+      HOST_IP: ${HOST_IP:-localhost}
+      NODE_ENV: production
+      # Database configuration
+      POSTGRES_DB: taskmanager
+      POSTGRES_USER: taskuser
+      POSTGRES_PASSWORD: taskpass123
+      # SSH configuration
+      SSH_USER: developer
+      SSH_PASSWORD: developer123
+      ROOT_PASSWORD: root123
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  vm_data:
+    driver: local
+  vm_logs:
+    driver: local
+  vm_config:
+    driver: local
+
+networks:
+  default:
+    name: three-tier-vm-network

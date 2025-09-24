@@ -1,0 +1,92 @@
+# Ubuntu VM-like container with full three-tier application stack
+FROM ubuntu:22.04
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=UTC
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    vim \
+    nano \
+    htop \
+    net-tools \
+    iputils-ping \
+    telnet \
+    tree \
+    unzip \
+    sudo \
+    openssh-server \
+    postgresql \
+    postgresql-contrib \
+    postgresql-client \
+    nginx \
+    supervisor \
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 18.x
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get update \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create application directory
+WORKDIR /app
+
+# Copy application source code
+COPY backend/ ./backend/
+COPY frontend/ ./frontend/
+COPY database/ ./database/
+COPY vm-*.sh ./
+COPY vm-*.conf ./
+
+# Install backend dependencies
+WORKDIR /app/backend
+RUN npm install --production
+
+# Install frontend dependencies and build for production
+WORKDIR /app/frontend
+RUN npm install
+ARG REACT_APP_API_URL=http://localhost:3001
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+RUN npm run build
+
+# Configure nginx for frontend
+RUN rm -f /etc/nginx/sites-enabled/default
+COPY vm-nginx.conf /etc/nginx/sites-available/default
+RUN ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
+
+# Copy built frontend to nginx directory
+RUN mkdir -p /var/www/html && cp -r /app/frontend/build/* /var/www/html/
+
+# Create developer user first
+RUN useradd -m -s /bin/bash developer \
+    && usermod -aG sudo developer
+
+# Configure SSH
+RUN mkdir -p /var/run/sshd \
+    && echo 'root:root123' | chpasswd \
+    && echo 'developer:developer123' | chpasswd \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+# Copy supervisor configuration
+COPY vm-supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Copy and set up scripts
+COPY vm-startup.sh /app/startup.sh
+COPY vm-healthcheck.sh /app/healthcheck.sh
+RUN chmod +x /app/startup.sh /app/healthcheck.sh
+
+# Expose ports
+EXPOSE 22 3000 3001 5432
+
+# Set working directory
+WORKDIR /app
+
+# Start the VM
+CMD ["/app/startup.sh"]
