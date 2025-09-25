@@ -37,9 +37,13 @@ case "${1:-help}" in
         # Determine API URL
         BACKEND_IP="${2}"
         if [ -z "$BACKEND_IP" ]; then
-            # Try environment variable
+            # Try environment variable first
             if [ -n "$REACT_APP_API_URL" ]; then
                 API_URL="$REACT_APP_API_URL"
+            # Then try .env file
+            elif [ -f ".env" ] && grep -q "REACT_APP_API_URL" .env; then
+                API_URL=$(grep "REACT_APP_API_URL" .env | cut -d'=' -f2)
+                echo "📄 Using API URL from .env file: $API_URL"
             else
                 # Cross-platform IP detection
                 if [[ "$(uname)" == "Linux" ]]; then
@@ -66,6 +70,8 @@ case "${1:-help}" in
         
         echo "🚀 Starting Ubuntu VM..."
         export HOST_IP=$(echo "$API_URL" | sed 's|http://||' | sed 's|:3001||')
+        export FRONTEND_URL="http://$HOST_IP:3000"
+        echo "🌐 Frontend URL: $FRONTEND_URL"
         ./start-vm.sh
         ;;
     stop)
