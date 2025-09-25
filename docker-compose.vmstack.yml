@@ -8,8 +8,7 @@ services:
       POSTGRES_DB: taskmanager
       POSTGRES_USER: taskuser
       POSTGRES_PASSWORD: taskpass123
-    ports:
-      - "5432:5432"
+    # No external ports - only internal communication
     volumes:
       - vmstack_postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -38,8 +37,7 @@ services:
       DB_USER: taskuser
       DB_PASSWORD: taskpass123
       HOST_IP: ${HOST_IP:-localhost}
-    ports:
-      - "3001:3001"
+    # No external ports - only accessible via nginx proxy
     depends_on:
       database:
         condition: service_healthy
@@ -60,8 +58,7 @@ services:
         REACT_APP_API_URL: http://${HOST_IP:-localhost}:3000
     container_name: vmstack_frontend
     hostname: frontend-vm
-    ports:
-      - "3002:3000"  # Internal port to avoid conflicts
+    # No external ports - only accessible via nginx proxy
     networks:
       - vmstack_network
     restart: unless-stopped
