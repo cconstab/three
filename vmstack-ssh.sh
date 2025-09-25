@@ -30,6 +30,8 @@ COMPOSE_FILE="docker-compose.vmstack-ssh.yml"
 detect_api_url() {
     if [[ -n "${REACT_APP_API_URL}" ]]; then
         echo "${REACT_APP_API_URL}"
+    elif [[ -n "${HOST_IP}" && -n "${EXTERNAL_PORT}" ]]; then
+        echo "http://${HOST_IP}:${EXTERNAL_PORT}/api"
     else
         echo "http://localhost:3001"
     fi
@@ -180,7 +182,10 @@ build_images() {
     docker build --load -t vmstack-nginx-ssh:latest -f Dockerfile.nginx-ssh .
     
     echo -e "${BLUE}Building frontend-vm...${NC}"
-    docker build --load -t vmstack-frontend-ssh:latest -f frontend/Dockerfile.prod.ssh --build-arg REACT_APP_API_URL="${REACT_APP_API_URL:-http://localhost:3001}" frontend/
+    # Determine API URL from environment variables
+    local api_url=$(detect_api_url)
+    echo -e "${YELLOW}Using API URL: $api_url${NC}"
+    docker build --load -t vmstack-frontend-ssh:latest -f frontend/Dockerfile.prod.ssh --build-arg REACT_APP_API_URL="$api_url" frontend/
     
     echo -e "${BLUE}Building backend-vm...${NC}"
     docker build --load -t vmstack-backend-ssh:latest -f backend/Dockerfile.ssh backend/
@@ -200,7 +205,10 @@ rebuild_stack() {
     docker build --load --no-cache -t vmstack-nginx-ssh:latest -f Dockerfile.nginx-ssh .
     
     echo -e "${BLUE}Rebuilding frontend-vm...${NC}"
-    docker build --load --no-cache -t vmstack-frontend-ssh:latest -f frontend/Dockerfile.prod.ssh --build-arg REACT_APP_API_URL="${REACT_APP_API_URL:-http://localhost:3001}" frontend/
+    # Determine API URL from environment variables
+    local api_url=$(detect_api_url)
+    echo -e "${YELLOW}Using API URL: $api_url${NC}"
+    docker build --load --no-cache -t vmstack-frontend-ssh:latest -f frontend/Dockerfile.prod.ssh --build-arg REACT_APP_API_URL="$api_url" frontend/
     
     echo -e "${BLUE}Rebuilding backend-vm...${NC}"
     docker build --load --no-cache -t vmstack-backend-ssh:latest -f backend/Dockerfile.ssh backend/
