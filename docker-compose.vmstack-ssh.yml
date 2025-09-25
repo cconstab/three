@@ -56,9 +56,9 @@ services:
       - NODE_ENV=production
       - DB_HOST=database-vm
       - DB_PORT=5432
-      - DB_NAME=${DB_NAME:-taskdb}
+      - DB_NAME=${DB_NAME:-taskmanager}
       - DB_USER=${DB_USER:-taskuser}
-      - DB_PASSWORD=${DB_PASSWORD:-taskpass}
+      - DB_PASSWORD=${DB_PASSWORD:-taskpass123}
     depends_on:
       - database-vm
     networks:
@@ -80,9 +80,9 @@ services:
       - "5432:5432"
       - "2204:22"    # SSH access
     environment:
-      - POSTGRES_DB=${DB_NAME:-taskdb}
+      - POSTGRES_DB=${DB_NAME:-taskmanager}
       - POSTGRES_USER=${DB_USER:-taskuser}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-taskpass}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-taskpass123}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
