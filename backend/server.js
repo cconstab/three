@@ -28,6 +28,8 @@ pool.on('error', (err) => {
 });
 
 // Middleware
+// Trust proxy for proper rate limiting behind nginx
+app.set('trust proxy', 1);
 app.use(helmet());
 app.use(morgan('combined'));
 
