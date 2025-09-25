@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.nginx-ssh
+    image: vmstack-nginx-ssh:latest
     container_name: nginx-vm
     ports:
       - "8080:80"
@@ -28,6 +29,7 @@ services:
       dockerfile: Dockerfile.prod.ssh
       args:
         REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:3001}
+    image: vmstack-frontend-ssh:latest
     container_name: frontend-vm
     ports:
       - "3000:3000"
@@ -45,6 +47,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.ssh
+    image: vmstack-backend-ssh:latest
     container_name: backend-vm
     ports:
       - "3001:3001"
@@ -71,6 +74,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.postgres-ssh
+    image: vmstack-database-ssh:latest
     container_name: database-vm
     ports:
       - "5432:5432"
