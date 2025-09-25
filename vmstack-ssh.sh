@@ -170,15 +170,40 @@ show_logs() {
 
 # Function to build images
 build_images() {
-    echo -e "${GREEN}Building VMStack images...${NC}"
-    docker-compose -f "$COMPOSE_FILE" build
+    echo -e "${GREEN}Building VMStack SSH images...${NC}"
+    
+    echo -e "${BLUE}Building nginx-vm...${NC}"
+    docker build --load -t vmstack-nginx-ssh:latest -f Dockerfile.nginx-ssh .
+    
+    echo -e "${BLUE}Building frontend-vm...${NC}"
+    docker build --load -t vmstack-frontend-ssh:latest -f frontend/Dockerfile.prod.ssh --build-arg REACT_APP_API_URL="${REACT_APP_API_URL:-http://localhost:3001}" frontend/
+    
+    echo -e "${BLUE}Building backend-vm...${NC}"
+    docker build --load -t vmstack-backend-ssh:latest -f backend/Dockerfile.ssh backend/
+    
+    echo -e "${BLUE}Building database-vm...${NC}"
+    docker build --load -t vmstack-database-ssh:latest -f Dockerfile.postgres-ssh .
+    
+    echo -e "${GREEN}All VMStack SSH images built successfully!${NC}"
 }
 
 # Function to rebuild and restart
 rebuild_stack() {
     echo -e "${YELLOW}Rebuilding and restarting VMStack...${NC}"
     docker-compose -f "$COMPOSE_FILE" down
-    docker-compose -f "$COMPOSE_FILE" build --no-cache
+    
+    echo -e "${BLUE}Rebuilding nginx-vm...${NC}"
+    docker build --load --no-cache -t vmstack-nginx-ssh:latest -f Dockerfile.nginx-ssh .
+    
+    echo -e "${BLUE}Rebuilding frontend-vm...${NC}"
+    docker build --load --no-cache -t vmstack-frontend-ssh:latest -f frontend/Dockerfile.prod.ssh --build-arg REACT_APP_API_URL="${REACT_APP_API_URL:-http://localhost:3001}" frontend/
+    
+    echo -e "${BLUE}Rebuilding backend-vm...${NC}"
+    docker build --load --no-cache -t vmstack-backend-ssh:latest -f backend/Dockerfile.ssh backend/
+    
+    echo -e "${BLUE}Rebuilding database-vm...${NC}"
+    docker build --load --no-cache -t vmstack-database-ssh:latest -f Dockerfile.postgres-ssh .
+    
     docker-compose -f "$COMPOSE_FILE" up -d
     echo -e "${GREEN}VMStack rebuilt and restarted${NC}"
 }
