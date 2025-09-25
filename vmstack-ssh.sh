@@ -129,6 +129,10 @@ start_stack() {
     if [[ $? -eq 0 ]]; then
         echo -e "${GREEN}VMStack started successfully!${NC}"
         echo ""
+        echo -e "${YELLOW}⚠️  IMPORTANT SSH CREDENTIALS:${NC}"
+        echo -e "${CYAN}Developer Account: ${GREEN}developer${NC} / ${GREEN}developer123${NC}"
+        echo -e "${CYAN}Root Account:      ${GREEN}root${NC} / ${GREEN}root123${NC}"
+        echo ""
         show_info
     else
         echo -e "${RED}Failed to start VMStack${NC}"
