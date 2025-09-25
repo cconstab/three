@@ -91,13 +91,16 @@ case "${1:-help}" in
         echo "⏳ Waiting for nginx to be ready..."
         sleep 2
         
+        # Get the external port from environment or default to 3000
+        EXTERNAL_PORT=${EXTERNAL_PORT:-3000}
+        
         echo ""
         echo "🎉 VM Stack is ready!"
         echo ""
         echo "📱 Access Points:"
-        echo "  Web App:       http://$HOST_IP:3000"
-        echo "  API (proxy):   http://$HOST_IP:3000/api"
-        echo "  Health Check:  http://$HOST_IP:3000/health"
+        echo "  Web App:       http://$HOST_IP:$EXTERNAL_PORT"
+        echo "  API (proxy):   http://$HOST_IP:$EXTERNAL_PORT/api"
+        echo "  Health Check:  http://$HOST_IP:$EXTERNAL_PORT/health"
         echo ""
         echo "🔒 Internal Services (not externally accessible):"
         echo "  Backend VM:    backend-vm:3001"
@@ -105,8 +108,8 @@ case "${1:-help}" in
         echo "  Database VM:   database-vm:5432"
         echo ""
         echo "🔍 Health Checks:"
-        echo "  curl http://$HOST_IP:3000/health"
-        echo "  curl http://$HOST_IP:3000/api/stats"
+        echo "  curl http://$HOST_IP:$EXTERNAL_PORT/health"
+        echo "  curl http://$HOST_IP:$EXTERNAL_PORT/api/stats"
         echo ""
         ;;
     stop)

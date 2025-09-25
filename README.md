@@ -48,9 +48,24 @@ A beautiful, modern task management application demonstrating a complete three-t
 ### Prerequisites
 - Docker and Docker Compose plugin installed
 - Git (to clone the repository)
-- For Linux server deployment: Network access to ports 3000-3001
+- For Linux server deployment: Network access to configured external port (default: 3000)
 
 **Note**: For deployment on Linux servers (non-localhost), the application automatically detects and configures the host IP address for remote access.
+
+### Port Configuration
+The application now supports configurable external ports to avoid conflicts with other development servers:
+
+```bash
+# Default port (may conflict with other React apps)
+EXTERNAL_PORT=3000
+
+# Alternative ports to avoid conflicts
+EXTERNAL_PORT=8080  # Common alternative
+EXTERNAL_PORT=5000  # Another popular choice
+EXTERNAL_PORT=4000  # Yet another option
+```
+
+Set this in your `.env` file for persistent configuration.
 
 ### 1. Clone and Start
 ```bash

@@ -55,7 +55,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile.prod
       args:
-        REACT_APP_API_URL: http://${HOST_IP:-localhost}:3000
+        REACT_APP_API_URL: http://${HOST_IP:-localhost}:${EXTERNAL_PORT:-3000}
     container_name: vmstack_frontend
     hostname: frontend-vm
     # No external ports - only accessible via nginx proxy
@@ -69,7 +69,7 @@ services:
     container_name: vmstack_nginx
     hostname: nginx-vm
     ports:
-      - "3000:80"
+      - "${EXTERNAL_PORT:-3000}:80"
     volumes:
       - ./nginx/vmstack.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
