@@ -2,6 +2,8 @@
 
 A beautiful, modern task management application demonstrating a complete three-tier architecture using Docker Compose.
 
+**🎯 New to this project? Start here:** **[Deployment Guide →](DEPLOYMENT-GUIDE.md)** - Choose between 4-Tier VM Stack (production) or Single VM (development).
+
 ## 🏗️ Architecture
 
 ```
@@ -44,6 +46,12 @@ A beautiful, modern task management application demonstrating a complete three-t
 - 🔍 **Filtering**: Filter tasks by status and priority
 
 ## 🚀 Quick Start
+
+**🏗️ For 4-Tier VM Architecture (Recommended for Production):**
+📖 **[VMSTACK Quick Start Guide →](VMSTACK-QUICKSTART.md)** - Separate containers for nginx, frontend, backend, and database with enhanced security.
+
+**📦 For Single-Container Development:**
+Continue with the guide below for the all-in-one VM approach.
 
 ### Prerequisites
 - Docker and Docker Compose plugin installed
