@@ -90,7 +90,46 @@ cp .env.linux .env
 
 ---
 
-### 📦 **Single VM (All-in-One) - BEST for Development**
+### � **SSH-Enabled VM Stack - BEST for VM-like Development**
+
+**4-Tier architecture with SSH access to every container**
+
+```
+Internet → Nginx VM → Frontend VM → Backend VM → Database VM
+    ↓         ↓           ↓            ↓           ↓
+  Port 8080  SSH:2201   SSH:2202   SSH:2203   SSH:2204
+```
+
+**Features:**
+- ✅ Traditional SSH access to each container
+- ✅ Full development tools (vim, htop, curl, wget)
+- ✅ User accounts with sudo privileges
+- ✅ Production architecture with development flexibility
+- ✅ Individual container debugging capabilities
+
+**Quick Start:**
+```bash
+git clone <repository-url>
+cd three
+cp .env.linux .env
+# Edit HOST_IP and EXTERNAL_PORT in .env
+./vmstack-ssh.sh start
+```
+
+**SSH Access:**
+```bash
+# SSH to any VM (password: developer123)
+./vmstack-ssh.sh ssh backend
+./vmstack-ssh.sh ssh frontend  
+./vmstack-ssh.sh ssh database
+./vmstack-ssh.sh ssh nginx
+```
+
+📖 **[Complete SSH VMStack Guide →](VMSTACK-SSH-README.md)**
+
+---
+
+### �📦 **Single VM (All-in-One) - BEST for Development**
 
 **Everything in one container for fast development**
 
@@ -122,6 +161,8 @@ cd three
 | Use Case | Recommended | Command |
 |----------|-------------|---------|
 | **Production Server** | 🏗️ VM Stack | `./vmstack.sh start` |
+| **VM-like Development** | 🔐 SSH VM Stack | `./vmstack-ssh.sh start` |
+| **Container Debugging** | 🔐 SSH VM Stack | `./vmstack-ssh.sh start` |
 | **Development/Testing** | 📦 Single VM | `./start.sh` |
 | **Learning/Demo** | 📦 Single VM | `./start.sh` |
 | **Port Conflicts** | 🏗️ VM Stack | `./vmstack.sh start` |
