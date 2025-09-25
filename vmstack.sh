@@ -3,6 +3,16 @@
 # VM Stack Management Script - 4-Tier Architecture
 set -e
 
+# Load environment variables from .env file if it exists
+if [ -f .env ]; then
+    echo "📄 Loading configuration from .env file..."
+    set -a  # automatically export all variables
+    source .env
+    set +a  # disable auto-export
+else
+    echo "⚠️  No .env file found, using defaults"
+fi
+
 COMPOSE_FILE="docker-compose.vmstack.yml"
 
 show_help() {
@@ -91,7 +101,8 @@ case "${1:-help}" in
         echo "⏳ Waiting for nginx to be ready..."
         sleep 2
         
-        # Get the external port from environment or default to 3000
+        # Get configuration from environment or defaults
+        HOST_IP=${HOST_IP:-localhost}
         EXTERNAL_PORT=${EXTERNAL_PORT:-3000}
         
         echo ""
