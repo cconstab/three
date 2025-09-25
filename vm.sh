@@ -34,7 +34,49 @@ show_help() {
 
 case "${1:-help}" in
     start)
+        # Determine API URL
+        BACKEND_IP="${2}"
+        if [ -z "$BACKEND_IP" ]; then
+            # Try environment variable first
+            if [ -n "$REACT_APP_API_URL" ]; then
+                API_URL="$REACT_APP_API_URL"
+            # Then try .env file
+            elif [ -f ".env" ] && grep -q "REACT_APP_API_URL" .env; then
+                API_URL=$(grep "REACT_APP_API_URL" .env | cut -d'=' -f2)
+                echo "📄 Using API URL from .env file: $API_URL"
+            else
+                # Cross-platform IP detection
+                if [[ "$(uname)" == "Linux" ]]; then
+                    DETECTED_IP=$(hostname -I | awk '{print $1}')
+                elif [[ "$(uname)" == "Darwin" ]]; then
+                    DETECTED_IP=$(ipconfig getifaddr en0)
+                    if [ -z "$DETECTED_IP" ]; then
+                        DETECTED_IP=$(ipconfig getifaddr en1)
+                    fi
+                else
+                    DETECTED_IP=""
+                fi
+                if [ -z "$DETECTED_IP" ]; then
+                    echo "⚠️ Could not auto-detect IP address. Please provide it as an argument or set REACT_APP_API_URL."
+                    exit 1
+                fi
+                API_URL="http://$DETECTED_IP:3000"
+            fi
+        else
+            API_URL="http://$BACKEND_IP:3000"
+        fi
+
+        # For nginx proxy setup, API and frontend use the same port (3000)
+        HOST_IP=$(echo "$API_URL" | sed 's|http://||' | sed 's|:.*||')
+        API_URL="http://$HOST_IP:3000"
+        
+        echo "🌐 Using unified URL (nginx proxy): $API_URL"
+        
         echo "🚀 Starting Ubuntu VM..."
+        export HOST_IP=$HOST_IP
+        export REACT_APP_API_URL="$API_URL"
+        export FRONTEND_URL="$API_URL"
+        echo "🌐 All traffic via: $API_URL"
         ./start-vm.sh
         ;;
     stop)
@@ -51,7 +93,9 @@ case "${1:-help}" in
         echo "🏗️ Rebuilding Ubuntu VM (fresh start)..."
         docker compose -f $COMPOSE_FILE down -v
         docker compose -f $COMPOSE_FILE build --no-cache
-        ./start-vm.sh
+        # Run the same logic as start to ensure frontend is built with correct API URL
+        shift
+        $0 start "$@"
         ;;
     logs)
         shift
