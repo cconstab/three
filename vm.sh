@@ -60,18 +60,23 @@ case "${1:-help}" in
                     echo "⚠️ Could not auto-detect IP address. Please provide it as an argument or set REACT_APP_API_URL."
                     exit 1
                 fi
-                API_URL="http://$DETECTED_IP:3001"
+                API_URL="http://$DETECTED_IP:3000"
             fi
         else
-            API_URL="http://$BACKEND_IP:3001"
+            API_URL="http://$BACKEND_IP:3000"
         fi
 
-        echo "🌐 Using API URL: $API_URL"
+        # For nginx proxy setup, API and frontend use the same port (3000)
+        HOST_IP=$(echo "$API_URL" | sed 's|http://||' | sed 's|:3001||')
+        API_URL="http://$HOST_IP:3000"
+        
+        echo "🌐 Using unified URL (nginx proxy): $API_URL"
         
         echo "🚀 Starting Ubuntu VM..."
-        export HOST_IP=$(echo "$API_URL" | sed 's|http://||' | sed 's|:3001||')
-        export FRONTEND_URL="http://$HOST_IP:3000"
-        echo "🌐 Frontend URL: $FRONTEND_URL"
+        export HOST_IP=$HOST_IP
+        export REACT_APP_API_URL="$API_URL"
+        export FRONTEND_URL="$API_URL"
+        echo "🌐 All traffic via: $API_URL"
         ./start-vm.sh
         ;;
     stop)
