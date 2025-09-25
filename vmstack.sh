@@ -5,7 +5,23 @@ set -e
 
 # Load environment variables from .env file if it exists
 if [ -f .env ]; then
-    echo "📄 Loading configuration from .env file..."
+    echo    shell)
+        if [ -z "$2" ]; then
+            echo "❌ Please specify which VM to shell into:"
+            echo "  nginx, frontend, backend, database"
+            echo ""
+            echo "Examples:"
+            echo "  $0 shell nginx              # Get shell in nginx VM"
+            echo "  $0 shell frontend           # Get shell in frontend VM"
+            echo "  $0 shell backend            # Get shell in backend VM"
+            echo "  $0 shell database           # Get shell in database VM"
+            exit 1
+        fi
+        echo "� Opening shell in $2 VM..."
+        # Try bash first, fall back to sh for alpine containers
+        docker compose -f $COMPOSE_FILE exec "$2" /bin/bash 2>/dev/null || \
+        docker compose -f $COMPOSE_FILE exec "$2" /bin/sh
+        ;;)ing configuration from .env file..."
     set -a  # automatically export all variables
     source .env
     set +a  # disable auto-export
@@ -27,6 +43,7 @@ show_help() {
     echo "  logs       Show logs from all VMs"
     echo "  status     Show status of all VMs"
     echo "  shell      Open shell in specified VM"
+    echo "  exec       Execute command in specified VM"
     echo "  clean      Stop VMs and remove volumes (DESTRUCTIVE)"
     echo "  help       Show this help message"
     echo ""
@@ -41,6 +58,10 @@ show_help() {
     echo "  $0 logs -f                  # Follow logs from all VMs"
     echo "  $0 shell nginx              # Get shell in nginx VM"
     echo "  $0 shell backend            # Get shell in backend VM"
+    echo "  $0 shell frontend           # Get shell in frontend VM"
+    echo "  $0 shell database           # Get shell in database VM"
+    echo "  $0 exec backend 'npm list'  # Execute command in backend VM"
+    echo "  $0 exec database 'psql -U taskuser taskmanager' # Connect to DB"
 }
 
 detect_api_url() {
@@ -133,6 +154,16 @@ case "${1:-help}" in
         echo "  curl http://$HOST_IP:$EXTERNAL_PORT/health"
         echo "  curl http://$HOST_IP:$EXTERNAL_PORT/api/stats"
         echo ""
+        echo "💻 VM Shell Access:"
+        echo "  $0 shell nginx              # Interactive shell in nginx VM"
+        echo "  $0 shell frontend           # Interactive shell in frontend VM"
+        echo "  $0 shell backend            # Interactive shell in backend VM"  
+        echo "  $0 shell database           # Interactive shell in database VM"
+        echo ""
+        echo "🔧 Execute Commands:"
+        echo "  $0 exec backend 'npm list'              # List backend packages"
+        echo "  $0 exec database 'psql -U taskuser taskmanager'  # Connect to DB"
+        echo ""
         ;;
     stop)
         echo "⏹️ Stopping VM Stack..."
@@ -159,10 +190,35 @@ case "${1:-help}" in
         if [ -z "$2" ]; then
             echo "❌ Please specify which VM to shell into:"
             echo "  nginx, frontend, backend, database"
+            echo ""
+            echo "Examples:"
+            echo "  $0 shell nginx              # Get shell in nginx VM"
+            echo "  $0 shell frontend           # Get shell in frontend VM"
+            echo "  $0 shell backend            # Get shell in backend VM"
+            echo "  $0 shell database           # Get shell in database VM"
             exit 1
         fi
         echo "💻 Opening shell in $2 VM..."
-        docker compose -f $COMPOSE_FILE exec "$2" /bin/bash
+        # Try bash first, fall back to sh for alpine containers
+        docker compose -f $COMPOSE_FILE exec "$2" /bin/bash 2>/dev/null || \
+        docker compose -f $COMPOSE_FILE exec "$2" /bin/sh
+        ;;
+    exec)
+        if [ -z "$2" ]; then
+            echo "❌ Please specify which VM and command to execute:"
+            echo "  Usage: $0 exec <vm> <command>"
+            echo ""
+            echo "Examples:"
+            echo "  $0 exec backend 'npm list'              # List Node.js packages"
+            echo "  $0 exec database 'psql -U taskuser taskmanager' # Connect to database"
+            echo "  $0 exec nginx 'nginx -t'                # Test nginx config"
+            echo "  $0 exec frontend 'ls -la /usr/share/nginx/html' # List frontend files"
+            exit 1
+        fi
+        VM_NAME="$2"
+        shift 2
+        echo "🔧 Executing command in $VM_NAME VM: $*"
+        docker compose -f $COMPOSE_FILE exec "$VM_NAME" "$@"
         ;;
     status)
         echo "📊 VM Stack Status:"
