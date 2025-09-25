@@ -13,6 +13,17 @@ echo "🌐 Using HOST_IP: $HOST_IP"
 # Update backend environment with HOST_IP
 export HOST_IP=$HOST_IP
 export FRONTEND_URL="http://$HOST_IP:3000"
+export REACT_APP_API_URL="http://$HOST_IP:3001"
+
+# Build frontend with correct API URL
+echo "🏗️ Building frontend with API URL: $REACT_APP_API_URL"
+cd /app/frontend
+npm run build
+cd /app
+
+# Copy built frontend to nginx directory
+echo "📋 Copying frontend build to nginx directory..."
+cp -r /app/frontend/build/* /var/www/html/
 
 # Ensure PostgreSQL directories exist with correct permissions
 mkdir -p /var/lib/postgresql/14/main

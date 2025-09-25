@@ -48,20 +48,17 @@ COPY vm-*.conf ./
 WORKDIR /app/backend
 RUN npm install --production
 
-# Install frontend dependencies and build for production
+# Install frontend dependencies (build will happen at runtime)
 WORKDIR /app/frontend
 RUN npm install
-ARG REACT_APP_API_URL=http://localhost:3001
-ENV REACT_APP_API_URL=$REACT_APP_API_URL
-RUN npm run build
 
 # Configure nginx for frontend
 RUN rm -f /etc/nginx/sites-enabled/default
 COPY vm-nginx.conf /etc/nginx/sites-available/default
 RUN ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
 
-# Copy built frontend to nginx directory
-RUN mkdir -p /var/www/html && cp -r /app/frontend/build/* /var/www/html/
+# Create nginx directory (frontend will be built and copied at runtime)
+RUN mkdir -p /var/www/html
 
 # Create developer user first
 RUN useradd -m -s /bin/bash developer \
