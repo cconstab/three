@@ -1,0 +1,38 @@
+FROM postgres:15-alpine
+
+# Install SSH server and other utilities
+RUN apk add --no-cache \
+    openssh-server \
+    sudo \
+    bash \
+    vim \
+    htop \
+    curl \
+    wget \
+    && mkdir -p /var/run/sshd
+
+# Create developer user
+RUN adduser -D -s /bin/bash developer \
+    && echo "developer:developer123" | chpasswd \
+    && echo "root:root123" | chpasswd \
+    && echo "developer ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Configure SSH
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config \
+    && ssh-keygen -A
+
+# Copy database initialization script
+COPY database/init.sql /docker-entrypoint-initdb.d/
+
+# Create startup script that runs both SSH and PostgreSQL
+RUN echo '#!/bin/bash' > /start-with-ssh.sh \
+    && echo '/usr/sbin/sshd' >> /start-with-ssh.sh \
+    && echo 'exec docker-entrypoint.sh postgres' >> /start-with-ssh.sh \
+    && chmod +x /start-with-ssh.sh
+
+# Expose ports
+EXPOSE 5432 22
+
+# Use custom startup script
+CMD ["/start-with-ssh.sh"]

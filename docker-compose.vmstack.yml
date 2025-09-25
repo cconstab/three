@@ -1,0 +1,89 @@
+services:
+  # Database VM - PostgreSQL
+  database:
+    image: postgres:15-alpine
+    container_name: vmstack_database
+    hostname: database-vm
+    environment:
+      POSTGRES_DB: taskmanager
+      POSTGRES_USER: taskuser
+      POSTGRES_PASSWORD: taskpass123
+    # No external ports - only internal communication
+    volumes:
+      - vmstack_postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - vmstack_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taskuser -d taskmanager"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Backend VM - Node.js API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vmstack_backend
+    hostname: backend-vm
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: database-vm
+      DB_PORT: 5432
+      DB_NAME: taskmanager
+      DB_USER: taskuser
+      DB_PASSWORD: taskpass123
+      HOST_IP: ${HOST_IP:-localhost}
+    # No external ports - only accessible via nginx proxy
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/server.js:/app/server.js
+      - ./backend/healthcheck.js:/app/healthcheck.js
+    networks:
+      - vmstack_network
+    restart: unless-stopped
+
+  # Frontend VM - React Build
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        REACT_APP_API_URL: http://${HOST_IP:-localhost}:${EXTERNAL_PORT:-3000}
+    container_name: vmstack_frontend
+    hostname: frontend-vm
+    # No external ports - only accessible via nginx proxy
+    networks:
+      - vmstack_network
+    restart: unless-stopped
+
+  # Nginx VM - Reverse Proxy & Static Server
+  nginx:
+    image: nginx:alpine
+    container_name: vmstack_nginx
+    hostname: nginx-vm
+    ports:
+      - "${EXTERNAL_PORT:-3000}:80"
+    volumes:
+      - ./nginx/vmstack.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - vmstack_network
+    restart: unless-stopped
+
+volumes:
+  vmstack_postgres_data:
+    driver: local
+
+networks:
+  vmstack_network:
+    driver: bridge
+    name: vmstack-network

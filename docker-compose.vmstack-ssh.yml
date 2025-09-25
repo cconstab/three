@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  nginx-vm:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx-ssh
+    image: vmstack-nginx-ssh:latest
+    container_name: nginx-vm
+    ports:
+      - "8080:80"
+      - "8443:443"
+      - "2201:22"    # SSH access
+    depends_on:
+      - frontend-vm
+      - backend-vm
+    networks:
+      - vmstack
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend-vm:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod.ssh
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:3001}
+    image: vmstack-frontend-ssh:latest
+    container_name: frontend-vm
+    ports:
+      - "3000:3000"
+      - "2202:22"    # SSH access
+    networks:
+      - vmstack
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend-vm:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.ssh
+    image: vmstack-backend-ssh:latest
+    container_name: backend-vm
+    ports:
+      - "3001:3001"
+      - "2203:22"    # SSH access
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=database-vm
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-taskmanager}
+      - DB_USER=${DB_USER:-taskuser}
+      - DB_PASSWORD=${DB_PASSWORD:-taskpass123}
+    depends_on:
+      - database-vm
+    networks:
+      - vmstack
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  database-vm:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres-ssh
+    image: vmstack-database-ssh:latest
+    container_name: database-vm
+    ports:
+      - "5432:5432"
+      - "2204:22"    # SSH access
+    environment:
+      - POSTGRES_DB=${DB_NAME:-taskmanager}
+      - POSTGRES_USER=${DB_USER:-taskuser}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-taskpass123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - vmstack
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-taskuser} -d ${DB_NAME:-taskdb}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  vmstack:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
