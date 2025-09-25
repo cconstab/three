@@ -75,7 +75,7 @@ RUN mkdir -p /var/run/sshd \
     && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
 # Copy supervisor configuration
-COPY vm-supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY vm-supervisord.conf /etc/supervisor/supervisord.conf
 
 # Copy and set up scripts
 COPY vm-startup.sh /app/startup.sh

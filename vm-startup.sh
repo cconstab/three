@@ -55,7 +55,7 @@ fi
 
 # Start supervisor to manage all services
 echo "🔄 Starting all services..."
-/usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf &
+/usr/bin/supervisord -c /etc/supervisor/supervisord.conf &
 SUPERVISOR_PID=$!
 
 # If this is first run, set up database after PostgreSQL starts

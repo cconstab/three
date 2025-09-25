@@ -34,7 +34,45 @@ show_help() {
 
 case "${1:-help}" in
     start)
+        # Determine API URL
+        BACKEND_IP="${2}"
+        if [ -z "$BACKEND_IP" ]; then
+            # Try environment variable
+            if [ -n "$REACT_APP_API_URL" ]; then
+                API_URL="$REACT_APP_API_URL"
+            else
+                # Cross-platform IP detection
+                if [[ "$(uname)" == "Linux" ]]; then
+                    DETECTED_IP=$(hostname -I | awk '{print $1}')
+                elif [[ "$(uname)" == "Darwin" ]]; then
+                    DETECTED_IP=$(ipconfig getifaddr en0)
+                    if [ -z "$DETECTED_IP" ]; then
+                        DETECTED_IP=$(ipconfig getifaddr en1)
+                    fi
+                else
+                    DETECTED_IP=""
+                fi
+                if [ -z "$DETECTED_IP" ]; then
+                    echo "⚠️ Could not auto-detect IP address. Please provide it as an argument or set REACT_APP_API_URL."
+                    exit 1
+                fi
+                API_URL="http://$DETECTED_IP:3001"
+            fi
+        else
+            API_URL="http://$BACKEND_IP:3001"
+        fi
+
+        echo "🌐 Using API URL: $API_URL"
+        echo "REACT_APP_API_URL=$API_URL" > frontend/.env
+        
+        # Delete old build and rebuild frontend with correct API URL
+        echo "🚀 Building frontend with correct API URL..."
+        rm -rf frontend/build
+        export REACT_APP_API_URL="$API_URL"
+        (cd frontend && npm run build)
+
         echo "🚀 Starting Ubuntu VM..."
+        export HOST_IP=$(echo "$API_URL" | sed 's|http://||' | sed 's|:3001||')
         ./start-vm.sh
         ;;
     stop)
@@ -51,7 +89,9 @@ case "${1:-help}" in
         echo "🏗️ Rebuilding Ubuntu VM (fresh start)..."
         docker compose -f $COMPOSE_FILE down -v
         docker compose -f $COMPOSE_FILE build --no-cache
-        ./start-vm.sh
+        # Run the same logic as start to ensure frontend is built with correct API URL
+        shift
+        $0 start "$@"
         ;;
     logs)
         shift
