@@ -44,15 +44,20 @@ show_help() {
 }
 
 detect_api_url() {
-    # Try environment variable first
-    if [ -n "$REACT_APP_API_URL" ]; then
+    # If HOST_IP and EXTERNAL_PORT are set from .env, build API_URL from them
+    if [ -n "$HOST_IP" ] && [ -n "$EXTERNAL_PORT" ]; then
+        API_URL="http://$HOST_IP:$EXTERNAL_PORT"
+        echo "📄 Building API URL from .env configuration: $API_URL"
+    # Try environment variable
+    elif [ -n "$REACT_APP_API_URL" ]; then
         API_URL="$REACT_APP_API_URL"
-    # Then try .env file
-    elif [ -f ".env" ] && grep -q "REACT_APP_API_URL" .env; then
-        API_URL=$(grep "REACT_APP_API_URL" .env | cut -d'=' -f2)
+        echo "📄 Using REACT_APP_API_URL environment variable: $API_URL"
+    # Then try .env file (ignore commented lines)
+    elif [ -f ".env" ] && grep -q "^REACT_APP_API_URL=" .env; then
+        API_URL=$(grep "^REACT_APP_API_URL=" .env | cut -d'=' -f2)
         echo "📄 Using API URL from .env file: $API_URL"
     else
-        # Cross-platform IP detection
+        # Cross-platform IP detection fallback
         if [[ "$(uname)" == "Linux" ]]; then
             DETECTED_IP=$(hostname -I | awk '{print $1}')
         elif [[ "$(uname)" == "Darwin" ]]; then
@@ -64,14 +69,20 @@ detect_api_url() {
             DETECTED_IP=""
         fi
         if [ -z "$DETECTED_IP" ]; then
-            echo "⚠️ Could not auto-detect IP address. Please set REACT_APP_API_URL in .env file."
+            echo "⚠️ Could not auto-detect IP address. Please configure HOST_IP and EXTERNAL_PORT in .env file."
             exit 1
         fi
-        API_URL="http://$DETECTED_IP:3000"
+        HOST_IP="$DETECTED_IP"
+        EXTERNAL_PORT="${EXTERNAL_PORT:-3000}"
+        API_URL="http://$HOST_IP:$EXTERNAL_PORT"
+        echo "📄 Auto-detected configuration: $API_URL"
     fi
     
-    # Extract HOST_IP from API_URL
-    HOST_IP=$(echo "$API_URL" | sed 's|http://||' | sed 's|:.*||')
+    # Only extract HOST_IP from API_URL if it wasn't already set from .env
+    if [ -z "$HOST_IP" ]; then
+        HOST_IP=$(echo "$API_URL" | sed 's|http://||' | sed 's|:.*||')
+    fi
+    
     export HOST_IP
     export REACT_APP_API_URL="$API_URL"
     export FRONTEND_URL="$API_URL"
