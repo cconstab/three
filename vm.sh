@@ -67,7 +67,7 @@ case "${1:-help}" in
         fi
 
         # For nginx proxy setup, API and frontend use the same port (3000)
-        HOST_IP=$(echo "$API_URL" | sed 's|http://||' | sed 's|:3001||')
+        HOST_IP=$(echo "$API_URL" | sed 's|http://||' | sed 's|:.*||')
         API_URL="http://$HOST_IP:3000"
         
         echo "🌐 Using unified URL (nginx proxy): $API_URL"
