@@ -1,0 +1,62 @@
+FROM node:18-alpine as builder
+
+WORKDIR /app
+
+# Accept build argument for API URL
+ARG REACT_APP_API_URL=http://localhost:3001
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies (including dev dependencies for build)
+RUN npm install
+
+# Copy application code
+COPY . .
+
+# Build the application for production with the API URL
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+RUN npm run build
+
+# Production stage with SSH
+FROM nginx:alpine
+
+# Install SSH server and other utilities
+RUN apk add --no-cache \
+    openssh-server \
+    sudo \
+    bash \
+    vim \
+    htop \
+    curl \
+    wget \
+    && mkdir -p /var/run/sshd
+
+# Create developer user
+RUN adduser -D -s /bin/bash developer \
+    && echo "developer:developer123" | chpasswd \
+    && echo "root:root123" | chpasswd \
+    && echo "developer ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Configure SSH
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config \
+    && ssh-keygen -A
+
+# Copy the built app from builder stage
+COPY --from=builder /app/build /usr/share/nginx/html
+
+# Copy custom nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Create startup script
+RUN echo '#!/bin/bash' > /start.sh \
+    && echo '/usr/sbin/sshd' >> /start.sh \
+    && echo 'nginx -g "daemon off;"' >> /start.sh \
+    && chmod +x /start.sh
+
+# Expose ports
+EXPOSE 3000 22
+
+# Start nginx and SSH
+CMD ["/start.sh"]
