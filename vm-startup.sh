@@ -18,6 +18,7 @@ export REACT_APP_API_URL="http://$HOST_IP:3001"
 # Build frontend with correct API URL
 echo "🏗️ Building frontend with API URL: $REACT_APP_API_URL"
 cd /app/frontend
+echo "REACT_APP_API_URL=$REACT_APP_API_URL" > .env
 npm run build
 cd /app
 

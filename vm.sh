@@ -63,14 +63,7 @@ case "${1:-help}" in
         fi
 
         echo "🌐 Using API URL: $API_URL"
-        echo "REACT_APP_API_URL=$API_URL" > frontend/.env
         
-        # Delete old build and rebuild frontend with correct API URL
-        echo "🚀 Building frontend with correct API URL..."
-        rm -rf frontend/build
-        export REACT_APP_API_URL="$API_URL"
-        (cd frontend && npm run build)
-
         echo "🚀 Starting Ubuntu VM..."
         export HOST_IP=$(echo "$API_URL" | sed 's|http://||' | sed 's|:3001||')
         ./start-vm.sh
