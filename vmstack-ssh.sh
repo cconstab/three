@@ -125,8 +125,8 @@ show_ports() {
 
 # Function to start the stack
 start_stack() {
-    echo -e "${GREEN}Starting SSH-enabled VMStack...${NC}"
-    docker-compose -f "$COMPOSE_FILE" up -d
+    echo -e "${GREEN}Starting fresh containers...${NC}"
+    docker compose -f "$COMPOSE_FILE" up -d
     
     if [[ $? -eq 0 ]]; then
         echo -e "${GREEN}VMStack started successfully!${NC}"
@@ -144,22 +144,22 @@ start_stack() {
 
 # Function to stop the stack
 stop_stack() {
-    echo -e "${YELLOW}Stopping VMStack...${NC}"
-    docker-compose -f "$COMPOSE_FILE" down
+    echo -e "${YELLOW}Stopping existing containers...${NC}"
+    docker compose -f "$COMPOSE_FILE" down
     echo -e "${GREEN}VMStack stopped${NC}"
 }
 
 # Function to restart the stack
 restart_stack() {
-    echo -e "${YELLOW}Restarting VMStack...${NC}"
-    docker-compose -f "$COMPOSE_FILE" restart
+    echo -e "${YELLOW}Restarting SSH-enabled VMStack...${NC}"
+    docker compose -f "$COMPOSE_FILE" restart
     echo -e "${GREEN}VMStack restarted${NC}"
 }
 
 # Function to show status
-show_status() {
+status_stack() {
     echo -e "${CYAN}VMStack Status:${NC}"
-    docker-compose -f "$COMPOSE_FILE" ps
+    docker compose -f "$COMPOSE_FILE" ps
 }
 
 # Function to show logs
@@ -167,10 +167,10 @@ show_logs() {
     local service="$1"
     if [[ -n "$service" ]]; then
         echo -e "${CYAN}Showing logs for $service-vm...${NC}"
-        docker-compose -f "$COMPOSE_FILE" logs -f "$service-vm"
+        docker compose -f "$COMPOSE_FILE" logs -f "$service-vm"
     else
         echo -e "${CYAN}Showing logs for all VMs...${NC}"
-        docker-compose -f "$COMPOSE_FILE" logs -f
+        docker compose -f "$COMPOSE_FILE" logs -f
     fi
 }
 
@@ -199,7 +199,7 @@ build_images() {
 # Function to rebuild and restart
 rebuild_stack() {
     echo -e "${YELLOW}Rebuilding and restarting VMStack...${NC}"
-    docker-compose -f "$COMPOSE_FILE" down
+    docker compose -f "$COMPOSE_FILE" down
     
     echo -e "${BLUE}Rebuilding nginx-vm...${NC}"
     docker build --load --no-cache -t vmstack-nginx-ssh:latest -f Dockerfile.nginx-ssh .
@@ -216,7 +216,7 @@ rebuild_stack() {
     echo -e "${BLUE}Rebuilding database-vm...${NC}"
     docker build --load --no-cache -t vmstack-database-ssh:latest -f Dockerfile.postgres-ssh .
     
-    docker-compose -f "$COMPOSE_FILE" up -d
+    docker compose -f "$COMPOSE_FILE" up -d
     echo -e "${GREEN}VMStack rebuilt and restarted${NC}"
 }
 
@@ -328,7 +328,7 @@ case "$1" in
         restart_stack
         ;;
     "status")
-        show_status
+        status_stack
         ;;
     "logs")
         show_logs "$2"

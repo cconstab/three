@@ -247,7 +247,7 @@ telnet localhost 2203
 docker ps
 
 # Restart specific VM
-docker-compose -f docker-compose.vmstack-ssh.yml restart backend-vm
+docker compose -f docker-compose.vmstack-ssh.yml restart backend-vm
 
 # Check VM logs
 docker logs backend-vm
